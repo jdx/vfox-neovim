@@ -45,4 +45,28 @@ for _, case in ipairs({
     assert(result.url == assets[1].browser_download_url)
     assert(result.sha256 == "abc")
 end
+for _, case in ipairs({
+    { "linux", "amd64", "nvim-linux64.tar.gz" },
+    { "darwin", "arm64", "nvim-macos.tar.gz" },
+}) do
+    RUNTIME = { osType = case[1], archType = case[2] }
+    assets = { { name = case[3], browser_download_url = "https://example.com/" .. case[3], digest = "sha256:abc" } }
+    assert(PLUGIN:PreInstall({ version = "0.9.5" }).url == assets[1].browser_download_url)
+end
+
+local seen
+package.loaded.http = nil
+package.preload.http = function()
+    return {
+        get = function(req)
+            seen = req.headers
+            return { status_code = 200, body = "release" }
+        end,
+    }
+end
+RUNTIME = { osType = "linux", archType = "amd64" }
+assets = { { name = "nvim-linux-x86_64.tar.gz", browser_download_url = "u", digest = "sha256:abc" } }
+PLUGIN:PreInstall({ version = "0.12.5" })
+local token = os.getenv("MISE_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+assert(seen["Authorization"] == (token and token ~= "" and "Bearer " .. token or nil))
 print("pre_install: 12 unsupported platforms rejected; 6 supported assets selected")

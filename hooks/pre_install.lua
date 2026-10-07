@@ -1,6 +1,15 @@
 --- Returns information about the version to install
 --- Constructs the download URL based on OS and architecture
 
+local function github_headers()
+    local headers = { ["Accept"] = "application/vnd.github.v3+json" }
+    local token = os.getenv("MISE_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if token ~= nil and token ~= "" then
+        headers["Authorization"] = "Bearer " .. token
+    end
+    return headers
+end
+
 function PLUGIN:PreInstall(ctx)
     local http = require("http")
     local json = require("json")
@@ -56,9 +65,7 @@ function PLUGIN:PreInstall(ctx)
     -- Fetch the specific release
     local resp, err = http.get({
         url = "https://api.github.com/repos/neovim/neovim/releases/tags/" .. tag,
-        headers = {
-            ["Accept"] = "application/vnd.github.v3+json",
-        },
+        headers = github_headers(),
     })
 
     if err ~= nil then
@@ -71,7 +78,28 @@ function PLUGIN:PreInstall(ctx)
     local release = json.decode(resp.body)
 
     -- Find the right asset and its checksum file
-    local asset_name = "nvim-" .. platform .. ext
+    -- Releases up to 0.10.3 used older asset names (nvim-linux64, and a universal
+    -- nvim-macos on 0.9.x), so fall back to those when the current name is absent.
+    local candidates = { "nvim-" .. platform .. ext }
+    if platform == "linux-x86_64" then
+        table.insert(candidates, "nvim-linux64" .. ext)
+    elseif platform == "macos-arm64" or platform == "macos-x86_64" then
+        table.insert(candidates, "nvim-macos" .. ext)
+    end
+
+    local available = {}
+    for _, asset in ipairs(release.assets) do
+        available[asset.name] = true
+    end
+
+    local asset_name = candidates[1]
+    for _, candidate in ipairs(candidates) do
+        if available[candidate] then
+            asset_name = candidate
+            break
+        end
+    end
+
     local checksum_name = asset_name .. ".sha256sum"
     local download_url = nil
     local checksum_url = nil

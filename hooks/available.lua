@@ -1,6 +1,15 @@
 --- Returns a list of available Neovim versions
 --- Fetches from GitHub releases API
 
+local function github_headers()
+    local headers = { ["Accept"] = "application/vnd.github.v3+json" }
+    local token = os.getenv("MISE_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    if token ~= nil and token ~= "" then
+        headers["Authorization"] = "Bearer " .. token
+    end
+    return headers
+end
+
 -- Helper function to get checksum for a release
 local function get_release_checksum(release, http)
     -- Determine platform-specific asset name
@@ -64,9 +73,7 @@ function PLUGIN:Available(ctx)
 
     local resp, err = http.get({
         url = "https://api.github.com/repos/neovim/neovim/releases",
-        headers = {
-            ["Accept"] = "application/vnd.github.v3+json",
-        },
+        headers = github_headers(),
     })
 
     if err ~= nil then
