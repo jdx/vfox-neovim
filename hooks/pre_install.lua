@@ -1,15 +1,6 @@
 --- Returns information about the version to install
 --- Constructs the download URL based on OS and architecture
 
-local function github_headers()
-    local headers = { ["Accept"] = "application/vnd.github.v3+json" }
-    local token = os.getenv("MISE_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
-    if token ~= nil and token ~= "" then
-        headers["Authorization"] = "Bearer " .. token
-    end
-    return headers
-end
-
 function PLUGIN:PreInstall(ctx)
     local http = require("http")
     local json = require("json")
@@ -65,7 +56,9 @@ function PLUGIN:PreInstall(ctx)
     -- Fetch the specific release
     local resp, err = http.get({
         url = "https://api.github.com/repos/neovim/neovim/releases/tags/" .. tag,
-        headers = github_headers(),
+        headers = {
+            ["Accept"] = "application/vnd.github.v3+json",
+        },
     })
 
     if err ~= nil then
