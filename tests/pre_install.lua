@@ -45,4 +45,13 @@ for _, case in ipairs({
     assert(result.url == assets[1].browser_download_url)
     assert(result.sha256 == "abc")
 end
+for _, case in ipairs({
+    { "linux", "amd64", "nvim-linux64.tar.gz" },
+    { "darwin", "arm64", "nvim-macos.tar.gz" },
+}) do
+    RUNTIME = { osType = case[1], archType = case[2] }
+    assets = { { name = case[3], browser_download_url = "https://example.com/" .. case[3], digest = "sha256:abc" } }
+    assert(PLUGIN:PreInstall({ version = "0.9.5" }).url == assets[1].browser_download_url)
+end
+
 print("pre_install: 12 unsupported platforms rejected; 6 supported assets selected")
